@@ -1,0 +1,207 @@
+﻿@{
+    ViewData["Title"] = "ToDo List";
+}
+
+<!-- Bootstrap CSS & JS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<h2 class="mb-3">Dynamic To-Do List</h2>
+
+<div class="d-flex justify-content-end mb-3">
+    <div class="input-group" style="max-width: 300px;">
+        <input type="email" id="emailInput" class="form-control" placeholder="Enter your email" required />
+    </div>
+</div>
+
+<div class="mb-2">
+    <button id="addRowBtn" class="btn btn-primary me-2">+</button>
+    <button id="exportBtn" class="btn btn-success me-2">Export</button>
+    <button id="sendBtn" class="btn btn-info" style="display:none;">Send Mail</button>
+</div>
+
+<table id="todoTable" class="table table-bordered table-striped">
+    <thead class="table-light">
+        <tr>
+            <th>Select</th>
+            <th>ID</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Delete</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<!-- Toast container -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
+    <div id="toast" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body" id="toastBody"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<!-- SheetJS for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+    const table = document.getElementById('todoTable').getElementsByTagName('tbody')[0];
+    const sendBtn = document.getElementById('sendBtn');
+    const emailInput = document.getElementById('emailInput');
+    const toastElement = document.getElementById('toast');
+    const toastBody = document.getElementById('toastBody');
+    const bsToast = new bootstrap.Toast(toastElement);
+    let nextId = 1;
+
+    document.getElementById('addRowBtn').addEventListener('click', () => {
+        addRow();
+    });
+
+    function addRow() {
+        const row = table.insertRow();
+
+        // Checkbox cell
+        const checkboxCell = row.insertCell();
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.disabled = true;
+        checkbox.className = 'selectRow';
+        checkboxCell.appendChild(checkbox);
+
+        // ID cell (readonly input)
+        const idCell = row.insertCell();
+        const idInput = document.createElement('input');
+        idInput.type = 'text';
+        idInput.value = nextId++;
+        idInput.readOnly = true;
+        idInput.className = 'form-control-plaintext';
+        idCell.appendChild(idInput);
+
+        // Description cell
+        const descCell = row.insertCell();
+        const descInput = document.createElement('input');
+        descInput.type = 'text';
+        descInput.className = 'form-control';
+        descInput.oninput = checkRowFilled;
+        descCell.appendChild(descInput);
+
+        // Status cell
+        const statusCell = row.insertCell();
+        const statusSelect = document.createElement('select');
+        statusSelect.className = 'form-select';
+        ["Pending", "Done", "InProgress"].forEach(status => {
+            const option = document.createElement('option');
+            option.value = status;
+            option.textContent = status;
+            statusSelect.appendChild(option);
+        });
+        statusSelect.onchange = checkRowFilled;
+        statusCell.appendChild(statusSelect);
+
+        // Delete button cell
+        const deleteCell = row.insertCell();
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'btn btn-danger btn-sm';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.onclick = () => {
+            row.remove();
+            checkRowFilled();
+        };
+        deleteCell.appendChild(deleteBtn);
+    }
+
+    function checkRowFilled() {
+        const rows = table.rows;
+        let anyCheckboxChecked = false;
+
+        for (let row of rows) {
+            const descVal = row.cells[2].children[0].value.trim();
+            const checkbox = row.cells[0].children[0];
+
+            if (descVal) {
+                checkbox.disabled = false;
+            } else {
+                checkbox.checked = false;
+                checkbox.disabled = true;
+            }
+            if (checkbox.checked) anyCheckboxChecked = true;
+        }
+
+        sendBtn.style.display = anyCheckboxChecked ? 'inline-block' : 'none';
+    }
+
+    table.addEventListener('change', checkRowFilled);
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+        const wb = XLSX.utils.book_new();
+        const wsData = [["ID", "Description", "Status"]];
+        for (let row of table.rows) {
+            const id = row.cells[1].children[0].value.trim();
+            const desc = row.cells[2].children[0].value.trim();
+            const status = row.cells[3].children[0].value;
+            if (desc) {
+                wsData.push([id, desc, status]);
+            }
+        }
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        XLSX.utils.book_append_sheet(wb, ws, "ToDoList");
+        XLSX.writeFile(wb, "ToDoList.xlsx");
+    });
+
+    document.getElementById('sendBtn').addEventListener('click', async () => {
+        const emailInput = document.getElementById('emailInput');
+        const email = emailInput.value.trim();
+
+        if (!emailInput.checkValidity()) {
+            showToast("Please enter a valid email address!");
+            emailInput.reportValidity();
+            return;
+        }
+
+        const selectedRows = [];
+        for (let row of table.rows) {
+            const checkbox = row.cells[0].children[0];
+            if (checkbox.checked) {
+                const id = row.cells[1].children[0].value.trim();
+                const desc = row.cells[2].children[0].value.trim();
+                const status = row.cells[3].children[0].value;
+                selectedRows.push({ Id: id, Description: desc, Status: status });
+            }
+        }
+
+        if (selectedRows.length === 0) {
+            showToast("Please select at least one row to send.");
+            return;
+        }
+
+        try {
+            const response = await fetch('/Home/SendMail', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ ToEmail: email, Items: selectedRows })
+            });
+
+            if (response.ok) {
+                showToast("Email sent successfully to " + email + "!");
+            } else {
+                const errorText = await response.text();
+                showToast(`Failed to send email: ${errorText}`);
+            }
+        } catch (error) {
+            showToast(`Error sending email: ${error.message}`);
+        }
+    });
+
+    function showToast(message) {
+        toastElement.classList.remove('text-bg-danger', 'text-bg-primary');
+        toastElement.classList.add(message.includes('successfully') ? 'text-bg-primary' : 'text-bg-danger');
+        toastBody.textContent = message;
+        bsToast.show();
+    }
+</script>
