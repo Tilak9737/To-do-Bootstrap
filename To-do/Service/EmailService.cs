@@ -26,6 +26,7 @@ namespace To_do.Service
                 Subject = "Your Selected ToDo Items",
                 IsBodyHtml = true,
                 Body = BuildEmailBody(items)
+
             };
 
             mail.To.Add(toEmail);

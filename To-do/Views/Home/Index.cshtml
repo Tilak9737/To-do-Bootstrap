@@ -2,7 +2,6 @@
     ViewData["Title"] = "ToDo List";
 }
 
-<!-- Bootstrap CSS & JS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -33,7 +32,6 @@
     <tbody></tbody>
 </table>
 
-<!-- Toast container -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
     <div id="toast" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
@@ -43,10 +41,10 @@
     </div>
 </div>
 
-<!-- SheetJS for Excel export -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script>
+	debugger;
     const table = document.getElementById('todoTable').getElementsByTagName('tbody')[0];
     const sendBtn = document.getElementById('sendBtn');
     const emailInput = document.getElementById('emailInput');
@@ -60,9 +58,9 @@
     });
 
     function addRow() {
+        debugger;
         const row = table.insertRow();
 
-        // Checkbox cell
         const checkboxCell = row.insertCell();
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -70,7 +68,6 @@
         checkbox.className = 'selectRow';
         checkboxCell.appendChild(checkbox);
 
-        // ID cell (readonly input)
         const idCell = row.insertCell();
         const idInput = document.createElement('input');
         idInput.type = 'text';
@@ -79,7 +76,6 @@
         idInput.className = 'form-control-plaintext';
         idCell.appendChild(idInput);
 
-        // Description cell
         const descCell = row.insertCell();
         const descInput = document.createElement('input');
         descInput.type = 'text';
@@ -87,7 +83,6 @@
         descInput.oninput = checkRowFilled;
         descCell.appendChild(descInput);
 
-        // Status cell
         const statusCell = row.insertCell();
         const statusSelect = document.createElement('select');
         statusSelect.className = 'form-select';
@@ -100,7 +95,6 @@
         statusSelect.onchange = checkRowFilled;
         statusCell.appendChild(statusSelect);
 
-        // Delete button cell
         const deleteCell = row.insertCell();
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
@@ -114,6 +108,8 @@
     }
 
     function checkRowFilled() {
+            debugger;
+
         const rows = table.rows;
         let anyCheckboxChecked = false;
 
@@ -132,10 +128,13 @@
 
         sendBtn.style.display = anyCheckboxChecked ? 'inline-block' : 'none';
     }
+        debugger;
 
     table.addEventListener('change', checkRowFilled);
 
     document.getElementById('exportBtn').addEventListener('click', () => {
+            debugger;
+
         const wb = XLSX.utils.book_new();
         const wsData = [["ID", "Description", "Status"]];
         for (let row of table.rows) {
@@ -152,6 +151,8 @@
     });
 
     document.getElementById('sendBtn').addEventListener('click', async () => {
+            debugger;
+
         const emailInput = document.getElementById('emailInput');
         const email = emailInput.value.trim();
 
@@ -199,6 +200,8 @@
     });
 
     function showToast(message) {
+            debugger;
+
         toastElement.classList.remove('text-bg-danger', 'text-bg-primary');
         toastElement.classList.add(message.includes('successfully') ? 'text-bg-primary' : 'text-bg-danger');
         toastBody.textContent = message;
